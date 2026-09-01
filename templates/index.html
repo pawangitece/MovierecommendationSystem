@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>MovieMind - Movie Recommendation System</title>
+
+    <link rel="stylesheet" href="/style.css">
+</head>
+
+
+<body>
+
+    <!-- Navigation Bar -->
+
+    <nav class="navbar">
+
+        <div class="logo">
+            🎬 MovieMind
+        </div>
+
+        <div class="nav-text">
+            AI Movie Recommendations
+        </div>
+
+    </nav>
+
+
+    <!-- Main Hero Section -->
+
+    <main>
+
+        <section class="hero">
+
+            <div class="hero-content">
+
+                <p class="tag">
+                    MACHINE LEARNING POWERED
+                </p>
+
+                <h1>
+                    Find your next
+                    <span>favorite movie.</span>
+                </h1>
+
+                <p class="description">
+                    Discover movies similar to the ones you love
+                    using content-based machine learning
+                    recommendations.
+                </p>
+
+
+                <!-- Search Form -->
+
+                <form method="POST" class="search-form">
+
+                    <div class="input-container">
+
+                        <span class="search-icon">🔍</span>
+
+                        <input
+                            type="text"
+                            name="movie"
+                            placeholder="Enter a movie name..."
+                            value="{{ selected_movie }}"
+                            required
+                        >
+
+                    </div>
+
+                    <button type="submit">
+                        Recommend
+                    </button>
+
+                </form>
+
+
+                {% if error %}
+
+                <div class="error-message">
+                    ⚠️ {{ error }}
+                </div>
+
+                {% endif %}
+
+            </div>
+
+        </section>
+
+
+        <!-- Recommendation Section -->
+
+        {% if recommendations %}
+
+        <section class="recommendations">
+
+            <div class="section-heading">
+
+                <div>
+
+                    <p class="small-heading">
+                        RECOMMENDED FOR YOU
+                    </p>
+
+                    <h2>
+                        Because you searched for
+                        <span>{{ selected_movie }}</span>
+                    </h2>
+
+                </div>
+
+                <div class="count">
+                    {{ recommendations|length }} Movies
+                </div>
+
+            </div>
+
+
+            <div class="movie-grid">
+
+                {% for movie in recommendations %}
+
+                <div class="movie-card">
+
+                    <div class="poster-placeholder">
+
+                        {% if movie.poster %}
+
+            <img
+                src="{{ movie.poster }}"
+                alt="{{ movie.title }}"
+            >
+
+        {% else %}
+
+            <div class="film-icon">
+                🎞️
+            </div>
+
+        {% endif %}
+
+
+                    </div>
+
+                    <div class="movie-info">
+
+                        <p class="movie-number">
+                            {{ "%02d"|format(loop.index) }}
+                        </p>
+
+                        <h3>
+                            {{ movie.title }}
+                        </h3>
+
+                        <div class="similarity">
+    <span>✦</span>
+    {{ movie.similarity }}% genre similarity
+</div>
+
+                    </div>
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+        </section>
+
+        {% else %}
+
+        <!-- Empty State -->
+
+        <section class="empty-state">
+
+            <div class="empty-icon">
+                🎥
+            </div>
+
+            <h2>
+                What would you like to watch?
+            </h2>
+
+            <p>
+                Enter a movie above and our recommendation
+                engine will find similar movies for you.
+            </p>
+
+        </section>
+
+        {% endif %}
+
+    </main>
+
+
+    <!-- Footer -->
+
+    <footer>
+
+        <p>
+            MovieMind • Movie Recommendation System
+            using Machine Learning
+        </p>
+
+        <p>
+            Content-Based Filtering • CountVectorizer •
+            Cosine Similarity
+        </p>
+
+    </footer>
+
+</body>
+
+</html>
