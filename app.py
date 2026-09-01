@@ -1,11 +1,10 @@
-from flask import Flask, render_template, request, send_from_directory
+from flask import Flask, render_template, request
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import os
 import requests
 from dotenv import load_dotenv
-
 
 # ==========================================
 # LOAD ENVIRONMENT VARIABLES
@@ -15,34 +14,21 @@ load_dotenv()
 
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 
+print("TMDB API KEY LOADED:",bool (TMDB_API_KEY)
+)
 
 # ==========================================
 # FLASK APPLICATION
 # ==========================================
 
-app = Flask(
-    __name__,
-    static_folder="public",
-    static_url_path=""
-)
-
-from flask import send_from_directory
+app = Flask(__name__)
 
 
 # ==========================================
 # PROJECT PATH
 # ==========================================
 
-BASE_DIR = os.path.dirname(
-    os.path.abspath(__file__)
-)
-
-@app.route("/style.css")
-def style():
-    return send_from_directory(
-        os.path.join(BASE_DIR, "public"),
-        "style.css"
-    )
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 DATA_PATH = os.path.join(
     BASE_DIR,
@@ -109,28 +95,11 @@ movies.reset_index(
     inplace=True
 )
 
-
-# Convert genres to string
-
-movies["genres"] = (
-    movies["genres"]
-    .astype(str)
-)
-
-
-# MovieLens format:
-# Action|Adventure|Sci-Fi
-#
-# Convert to:
-# action adventure sci-fi
+movies["genres"] = movies["genres"].astype(str)
 
 movies["genres"] = (
     movies["genres"]
-    .str.replace(
-        "|",
-        " ",
-        regex=False
-    )
+    .str.replace("|", " ", regex=False)
     .str.lower()
 )
 
@@ -162,39 +131,27 @@ cosine_sim = cosine_similarity(
 # ==========================================
 # TMDB POSTER FUNCTION
 # ==========================================
-
 def get_movie_poster(title):
 
     if not TMDB_API_KEY:
-        print("TMDB_API_KEY is not configured.")
+        print("ERROR: TMDB_API_KEY is missing.")
         return None
 
     try:
 
-        # --------------------------------------
-        # STEP 1: Clean the movie title
-        # --------------------------------------
-
-        clean_title = title.strip()
-
-        # Example:
-        # "Toy Story (1995)"
-        # becomes:
-        # "Toy Story"
-
         import re
 
+        # Clean movie title
+        clean_title = title.strip()
+
+        # Remove year from title
         title_without_year = re.sub(
             r"\s*\(\d{4}\)\s*$",
             "",
             clean_title
         ).strip()
 
-
-        # --------------------------------------
-        # STEP 2: Extract release year
-        # --------------------------------------
-
+        # Extract year
         year_match = re.search(
             r"\((\d{4})\)\s*$",
             clean_title
@@ -205,110 +162,50 @@ def get_movie_poster(title):
         if year_match:
             year = year_match.group(1)
 
-
-        # --------------------------------------
-        # STEP 3: Search TMDB
-        # --------------------------------------
-
-        url = (
-            "https://api.themoviedb.org/3/"
-            "search/movie"
-        )
-
+        # TMDB URL
+        url = "https://api.themoviedb.org/3/search/movie"
 
         params = {
             "api_key": TMDB_API_KEY,
             "query": title_without_year,
             "language": "en-US",
-            "include_adult": False
+            "include_adult": "false"
         }
 
-
-        # If year exists, tell TMDB the year
         if year:
             params["year"] = year
 
+        print("Searching TMDB for:", title_without_year)
 
         response = requests.get(
             url,
             params=params,
-            timeout=5
+            timeout=10
         )
 
+        print("TMDB status:", response.status_code)
 
         if response.status_code != 200:
-
-            print(
-                "TMDB API error:",
-                response.status_code
-            )
-
+            print("TMDB response:", response.text)
             return None
-
 
         data = response.json()
 
-        results = data.get(
-            "results",
-            []
-        )
-
-
-        # --------------------------------------
-        # STEP 4: If no result, search again
-        # without the year
-        # --------------------------------------
-
-        if not results:
-
-            params = {
-                "api_key": TMDB_API_KEY,
-                "query": title_without_year,
-                "language": "en-US",
-                "include_adult": False
-            }
-
-            response = requests.get(
-                url,
-                params=params,
-                timeout=5
-            )
-
-            if response.status_code != 200:
-                return None
-
-            data = response.json()
-
-            results = data.get(
-                "results",
-                []
-            )
-
-
-        # --------------------------------------
-        # STEP 5: Check results
-        # --------------------------------------
+        results = data.get("results", [])
 
         if not results:
 
             print(
-                "No TMDB result for:",
+                "No TMDB movie found:",
                 title
             )
 
             return None
 
-
-        # --------------------------------------
-        # STEP 6: Find first movie
-        # with a poster
-        # --------------------------------------
-
+        # Find movie with poster
         for movie in results:
 
-            poster_path = movie.get(
-                "poster_path"
-            )
+            poster_path = movie.get("poster_path")
 
             if poster_path:
 
@@ -317,27 +214,55 @@ def get_movie_poster(title):
                     + poster_path
                 )
 
+                print(
+                    "Poster found:",
+                    poster_url
+                )
+
                 return poster_url
 
-
-        # No poster found
-
         print(
-            "Movie found but poster unavailable:",
+            "Movie found but no poster:",
             title
         )
 
         return None
 
-
-    except requests.RequestException as e:
+    except requests.exceptions.ConnectionError as e:
 
         print(
-            "TMDB connection error:",
+            "TMDB CONNECTION ERROR:",
             e
         )
 
         return None
+
+    except requests.exceptions.Timeout:
+
+        print(
+            "TMDB REQUEST TIMED OUT."
+        )
+
+        return None
+
+    except requests.exceptions.RequestException as e:
+
+        print(
+            "TMDB REQUEST ERROR:",
+            e
+        )
+
+        return None
+
+
+  
+         
+      
+
+        
+
+               
+      
 
 # ==========================================
 # RECOMMENDATION FUNCTION
@@ -352,31 +277,21 @@ def get_recommendations(
 
         return None
 
-
     title = title.strip()
 
-
-    # --------------------------------------
     # EXACT MATCH
-    # --------------------------------------
-
     exact_matches = movies[
         movies["title"].str.lower()
         == title.lower()
     ]
 
-
     if not exact_matches.empty:
 
         idx = exact_matches.index[0]
 
-
     else:
 
-        # ----------------------------------
         # PARTIAL MATCH
-        # ----------------------------------
-
         partial_matches = movies[
             movies["title"]
             .str.lower()
@@ -387,23 +302,14 @@ def get_recommendations(
             )
         ]
 
-
         if partial_matches.empty:
 
             return None
 
-
         idx = partial_matches.index[0]
 
-
-    # --------------------------------------
-    # GET SIMILARITY SCORES
-    # --------------------------------------
-
-    similarity_row = cosine_sim.getrow(
-        idx
-    )
-
+    # Get similarity scores
+    similarity_row = cosine_sim.getrow(idx)
 
     sim_scores = list(
         zip(
@@ -412,38 +318,26 @@ def get_recommendations(
         )
     )
 
-
     # Sort by similarity
-
     sim_scores = sorted(
         sim_scores,
         key=lambda x: x[1],
         reverse=True
     )
 
-
     # Remove selected movie
-
     sim_scores = [
         item
         for item in sim_scores
         if item[0] != idx
     ]
 
-
-    # Get top N
-
+    # Top N movies
     sim_scores = sim_scores[
         :number_of_movies
     ]
 
-
-    # --------------------------------------
-    # CREATE RECOMMENDATION DATA
-    # --------------------------------------
-
     recommendations = []
-
 
     for movie_index, similarity_score in sim_scores:
 
@@ -451,13 +345,9 @@ def get_recommendations(
             movie_index
         ]["title"]
 
-
-        # Get TMDB poster
-
         poster = get_movie_poster(
             movie_title
         )
-
 
         recommendations.append({
 
@@ -472,7 +362,6 @@ def get_recommendations(
 
         })
 
-
     return recommendations
 
 
@@ -480,11 +369,7 @@ def get_recommendations(
 # HOME PAGE
 # ==========================================
 
-@app.route(
-    "/",
-    methods=["GET", "POST"]
-)
-
+@app.route("/", methods=["GET", "POST"])
 def home():
 
     recommendations = []
@@ -493,7 +378,6 @@ def home():
 
     error = ""
 
-
     if request.method == "POST":
 
         selected_movie = request.form.get(
@@ -501,22 +385,15 @@ def home():
             ""
         ).strip()
 
-
         if not selected_movie:
 
-            error = (
-                "Please enter a movie name."
-            )
-
+            error = "Please enter a movie name."
 
         else:
 
-            recommendations = (
-                get_recommendations(
-                    selected_movie
-                )
+            recommendations = get_recommendations(
+                selected_movie
             )
-
 
             if recommendations is None:
 
@@ -528,17 +405,11 @@ def home():
 
                 recommendations = []
 
-
     return render_template(
-
         "index.html",
-
         recommendations=recommendations,
-
         selected_movie=selected_movie,
-
         error=error
-
     )
 
 
@@ -549,5 +420,7 @@ def home():
 if __name__ == "__main__":
 
     app.run(
-        debug=True
+        host="127.0.0.1",
+        port=5050,
+        debug=False
     )
