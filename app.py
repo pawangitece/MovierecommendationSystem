@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_from_directory
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -26,6 +26,8 @@ app = Flask(
     static_url_path=""
 )
 
+from flask import send_from_directory
+
 
 # ==========================================
 # PROJECT PATH
@@ -34,6 +36,13 @@ app = Flask(
 BASE_DIR = os.path.dirname(
     os.path.abspath(__file__)
 )
+
+@app.route("/style.css")
+def style():
+    return send_from_directory(
+        os.path.join(BASE_DIR, "public"),
+        "style.css"
+    )
 
 DATA_PATH = os.path.join(
     BASE_DIR,
